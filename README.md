@@ -24,3 +24,11 @@
    ```bash
    pip install -r requirements.txt
    ```
+5. Run the tool:
+   ```bash
+   python main.py
+   ```
+## Running Dashboard
+   ```
+   python app.py
+   ```
