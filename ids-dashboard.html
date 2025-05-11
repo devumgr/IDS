@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network IDS Dashboard</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        header {
+            background-color: var(--dark);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--danger);
+        }
+        
+        .status-indicator.active {
+            background-color: var(--success);
+        }
+        
+        main {
+            padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .controls {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        button.primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        button.success {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        button.danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        select, input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .alert-count {
+            padding: 0.25rem 0.5rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .alert-count.high {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .alert-count.medium {
+            background-color: var(--warning);
+            color: white;
+        }
+        
+        .alert-count.low {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .traffic-chart {
+            height: 200px;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        
+        .alert-list, .log-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .alert-item, .log-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .alert-item:last-child, .log-item:last-child {
+            border-bottom: none;
+        }
+        
+        .alert-severity {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .alert-severity.high {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .alert-severity.medium {
+            background-color: var(--warning);
+            color: white;
+        }
+        
+        .alert-severity.low {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .timestamp {
+            color: #777;
+            font-size: 0.8rem;
+        }
+        
+        .connections-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .connections-table th, .connections-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .packets-container {
+            margin-top: 1rem;
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 1rem;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        
+        .packet-row {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .signature-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .signature-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .signature-item:last-child {
+            border-bottom: none;
+        }
+        
+        footer {
+            background-color: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .log-entry {
+            font-family: monospace;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Network IDS Dashboard</div>
+        <div class="status">
+            <div class="status-indicator" id="status-indicator"></div>
+            <span id="status-text">Stopped</span>
+        </div>
+    </header>
+    
+    <main>
+        <div class="controls">
+            <div class="control-group">
+                <select id="interface-select">
+                    <option value="eth0">eth0</option>
+                    <option value="wlan0">wlan0</option>
+                    <option value="en0">en0</option>
+                </select>
+                <button class="success" id="start-btn">Start Monitoring</button>
+                <button class="danger" id="stop-btn" disabled>Stop Monitoring</button>
+                <button class="primary" id="clear-btn">Clear Logs</button>
+            </div>
+            <div class="control-group">
+                <span>Signature Set:</span>
+                <select id="signature-set">
+                    <option value="default">Default Ruleset</option>
+                    <option value="sql">SQL Injection Rules</option>
+                    <option value="port">Port Scan Rules</option>
+                    <option value="xss">XSS Attack Rules</option>
+                </select>
+                <button class="primary" id="reload-btn">Reload Rules</button>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Traffic Overview</div>
+                </div>
+                <div class="traffic-chart" id="traffic-chart">
+                    <canvas id="trafficCanvas" width="100%" height="200"></canvas>
+                </div>
+                <div>
+                    <div><strong>Total Packets:</strong> <span id="total-packets">0</span></div>
+                    <div><strong>Packets/sec:</strong> <span id="packets-sec">0</span></div>
+                    <div><strong>Data Transferred:</strong> <span id="data-transferred">0 KB</span></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Active Connections</div>
+                </div>
+                <table class="connections-table">
+                    <thead>
+                        <tr>
+                            <th>Source IP</th>
+                            <th>Destination IP</th>
+                            <th>Protocol</th>
+                            <th>Port</th>
+                        </tr>
+                    </thead>
+                    <tbody id="connections-tbody">
+                        <!-- Active connections will be added here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="grid" style="margin-top: 1rem;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Alert Feed</div>
+                    <div>
+                        <span class="alert-count high" id="high-count">0</span>
+                        <span class="alert-count medium" id="medium-count">0</span>
+                        <span class="alert-count low" id="low-count">0</span>
+                    </div>
+                </div>
+                <div class="alert-list" id="alert-list">
+                    <!-- Alerts will be added here -->
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Event Logs</div>
+                </div>
+                <div class="log-list" id="log-list">
+                    <!-- Logs will be added here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid" style="margin-top: 1rem;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Raw Packet Data</div>
+                </div>
+                <div class="packets-container" id="packets-container">
+                    <!-- Packet data will be added here -->
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Active Signatures</div>
+                </div>
+                <div class="signature-list" id="signature-list">
+                    <!-- Signatures will be added here -->
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        Network Intrusion Detection System Dashboard &copy; 2025
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script>
+        // Sample data for demonstration
+        const sampleSignatures = [
+            { id: "SQL-001", description: "SQL Injection attempt using UNION SELECT", severity: "High" },
+            { id: "PORT-001", description: "Sequential port scan detected", severity: "Medium" },
+            { id: "XSS-001", description: "Cross-site scripting attempt using script tags", severity: "High" },
+            { id: "BRUTE-001", description: "Potential brute force login attempt", severity: "Medium" },
+            { id: "DOS-001", description: "High rate of SYN packets from single source", severity: "High" },
+            { id: "RECON-001", description: "ICMP ping sweep detected", severity: "Low" },
+            { id: "SHELL-001", description: "Shell command injection attempt", severity: "High" },
+            { id: "FILE-001", description: "Potential directory traversal attack", severity: "Medium" }
+        ];
+        
+        const sampleAlerts = [
+            { timestamp: "2025-04-07 14:32:15", message: "SQL Injection attempt from 192.168.1.105", rule: "SQL-001", severity: "High", sourceIp: "192.168.1.105", destIp: "10.0.0.5" },
+            { timestamp: "2025-04-07 14:30:22", message: "Port scan detected from 192.168.1.110", rule: "PORT-001", severity: "Medium", sourceIp: "192.168.1.110", destIp: "10.0.0.1" },
+            { timestamp: "2025-04-07 14:28:47", message: "Potential brute force attempt on admin login", rule: "BRUTE-001", severity: "Medium", sourceIp: "192.168.1.115", destIp: "10.0.0.5" },
+            { timestamp: "2025-04-07 14:25:33", message: "ICMP ping sweep from external network", rule: "RECON-001", severity: "Low", sourceIp: "203.0.113.10", destIp: "10.0.0.1" }
+        ];
+        
+        const sampleConnections = [
+            { sourceIp: "192.168.1.105", destIp: "10.0.0.5", protocol: "TCP", port: 443 },
+            { sourceIp: "192.168.1.110", destIp: "10.0.0.1", protocol: "TCP", port: 22 },
+            { sourceIp: "192.168.1.115", destIp: "10.0.0.5", protocol: "TCP", port: 80 },
+            { sourceIp: "203.0.113.10", destIp: "10.0.0.1", protocol: "ICMP", port: "-" }
+        ];
+        
+        const samplePackets = [
+            "14:32:15.123 IP 192.168.1.105.49152 > 10.0.0.5.443: TCP 74 bytes",
+            "14:32:14.987 IP 10.0.0.5.443 > 192.168.1.105.49152: TCP 1460 bytes",
+            "14:32:14.854 IP 192.168.1.110.49153 > 10.0.0.1.22: TCP 66 bytes",
+            "14:32:14.722 IP 10.0.0.1.22 > 192.168.1.110.49153: TCP 98 bytes",
+            "14:32:14.589 IP 192.168.1.115.49154 > 10.0.0.5.80: TCP 128 bytes",
+            "14:32:14.456 IP 10.0.0.5.80 > 192.168.1.115.49154: TCP 1460 bytes",
+            "14:32:14.323 IP 203.0.113.10 > 10.0.0.1: ICMP echo request",
+            "14:32:14.190 IP 10.0.0.1 > 203.0.113.10: ICMP echo reply"
+        ];
+        
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const reloadBtn = document.getElementById('reload-btn');
+            const interfaceSelect = document.getElementById('interface-select');
+            const alertList = document.getElementById('alert-list');
+            const logList = document.getElementById('log-list');
+            const connectionsTable = document.getElementById('connections-tbody');
+            const packetsContainer = document.getElementById('packets-container');
+            const signatureList = document.getElementById('signature-list');
+            const totalPackets = document.getElementById('total-packets');
+            const packetsPerSec = document.getElementById('packets-sec');
+            const dataTransferred = document.getElementById('data-transferred');
+            
+            const highCount = document.getElementById('high-count');
+            const mediumCount = document.getElementById('medium-count');
+            const lowCount = document.getElementById('low-count');
+            
+            // Traffic chart
+            const ctx = document.getElementById('trafficCanvas').getContext('2d');
+            const trafficChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 30}, (_, i) => i),
+                    datasets: [{
+                        label: 'Packets/sec',
+                        data: Array.from({length: 30}, () => Math.floor(Math.random() * 50)),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            
+            // Populate initial data
+            populateSignatures();
+            populateAlerts();
+            populateLogs();
+            populateConnections();
+            populatePackets();
+            updateCounters();
+            
+            // Event listeners
+            startBtn.addEventListener('click', function() {
+                statusIndicator.classList.add('active');
+                statusText.textContent = 'Monitoring';
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                
+                // Simulate monitoring by updating data
+                startMonitoring();
+            });
+            
+            stopBtn.addEventListener('click', function() {
+                statusIndicator.classList.remove('active');
+                statusText.textContent = 'Stopped';
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                
+                // Stop simulated monitoring
+                stopMonitoring();
+            });
+            
+            clearBtn.addEventListener('click', function() {
+                clearData();
+            });
+            
+            reloadBtn.addEventListener('click', function() {
+                const signatureSet = document.getElementById('signature-set').value;
+                // Simulate reloading signatures
+                populateSignatures();
+                
+                // Add log entry for reloading rules
+                addLogEntry(`Reloaded ${signatureSet} ruleset`);
+            });
+            
+            // Functions to populate UI elements
+            function populateSignatures() {
+                signatureList.innerHTML = '';
+                sampleSignatures.forEach(sig => {
+                    const sigItem = document.createElement('div');
+                    sigItem.className = 'signature-item';
+                    sigItem.innerHTML = `
+                        <div><strong>${sig.id}</strong>: ${sig.description}</div>
+                        <div>Severity: <span class="alert-severity ${sig.severity.toLowerCase()}">${sig.severity}</span></div>
+                    `;
+                    signatureList.appendChild(sigItem);
+                });
+            }
+            
+            function populateAlerts() {
+                alertList.innerHTML = '';
+                sampleAlerts.forEach(alert => {
+                    addAlertItem(alert);
+                });
+            }
+            
+            function populateLogs() {
+                logList.innerHTML = '';
+                // Add system startup log
+                addLogEntry('System initialized');
+                addLogEntry('Loaded default signature set');
+                addLogEntry('Waiting for monitoring to start');
+            }
+            
+            function populateConnections() {
+                connectionsTable.innerHTML = '';
+                sampleConnections.forEach(conn => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${conn.sourceIp}</td>
+                        <td>${conn.destIp}</td>
+                        <td>${conn.protocol}</td>
+                        <td>${conn.port}</td>
+                    `;
+                    connectionsTable.appendChild(row);
+                });
+            }
+            
+            function populatePackets() {
+                packetsContainer.innerHTML = '';
+                samplePackets.forEach(packet => {
+                    const packetRow = document.createElement('div');
+                    packetRow.className = 'packet-row';
+                    packetRow.textContent = packet;
+                    packetsContainer.appendChild(packetRow);
+                });
+            }
+            
+            function updateCounters() {
+                let high = 0, medium = 0, low = 0;
+                
+                sampleAlerts.forEach(alert => {
+                    if (alert.severity === 'High') high++;
+                    else if (alert.severity === 'Medium') medium++;
+                    else if (alert.severity === 'Low') low++;
+                });
+                
+                highCount.textContent = high;
+                mediumCount.textContent = medium;
+                lowCount.textContent = low;
+                
+                totalPackets.textContent = Math.floor(Math.random() * 10000 + 5000);
+                packetsPerSec.textContent = Math.floor(Math.random() * 100 + 20);
+                dataTransferred.textContent = (Math.random() * 100 + 10).toFixed(2) + ' MB';
+            }
+            
+            function addAlertItem(alert) {
+                const alertItem = document.createElement('div');
+                alertItem.className = 'alert-item';
+                alertItem.innerHTML = `
+                    <div>
+                        <div>${alert.message}</div>
+                        <div class="timestamp">${alert.timestamp} | Rule: ${alert.rule}</div>
+                    </div>
+                    <div>
+                        <span class="alert-severity ${alert.severity.toLowerCase()}">${alert.severity}</span>
+                    </div>
+                `;
+                alertList.insertBefore(alertItem, alertList.firstChild);
+            }
+            
+            function addLogEntry(message) {
+                const now = new Date();
+                const timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+                
+                const logItem = document.createElement('div');
+                logItem.className = 'log-item';
+                logItem.innerHTML = `
+                    <span class="log-entry">[${timestamp}] ${message}</span>
+                `;
+                logList.insertBefore(logItem, logList.firstChild);
+            }
+            
+            function addPacketData(packet) {
+                const packetRow = document.createElement('div');
+                packetRow.className = 'packet-row';
+                packetRow.textContent = packet;
+                packetsContainer.insertBefore(packetRow, packetsContainer.firstChild);
+                
+                // Keep only last 20 packets
+                if (packetsContainer.childNodes.length > 20) {
+                    packetsContainer.removeChild(packetsContainer.lastChild);
+                }
+            }
+            
+            function addConnection(conn) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${conn.sourceIp}</td>
+                    <td>${conn.destIp}</td>
+                    <td>${conn.protocol}</td>
+                    <td>${conn.port}</td>
+                `;
+                connectionsTable.insertBefore(row, connectionsTable.firstChild);
+                
+                // Keep only last 10 connections
+                if (connectionsTable.childNodes.length > 10) {
+                    connectionsTable.removeChild(connectionsTable.lastChild);
+                }
+            }
+            
+            function clearData() {
+                alertList.innerHTML = '';
+                logList.innerHTML = '';
+                
+                // Add clear log entry
+                addLogEntry('Logs cleared by user');
+            }
+            
+            // Simulated monitoring
+            let monitoringInterval;
+            let alertInterval;
+            
+            function startMonitoring() {
+                // Log start
+                addLogEntry(`Started monitoring on ${interfaceSelect.value}`);
+                
+                // Update traffic chart periodically
+                monitoringInterval = setInterval(() => {
+                    // Update chart with new data point
+                    trafficChart.data.datasets[0].data.shift();
+                    trafficChart.data.datasets[0].data.push(Math.floor(Math.random() * 50 + 10));
+                    trafficChart.update();
+                    
+                    // Update stats
+                    packetsPerSec.textContent = trafficChart.data.datasets[0].data[trafficChart.data.datasets[0].data.length - 1];
+                    totalPackets.textContent = parseInt(totalPackets.textContent) + parseInt(packetsPerSec.textContent);
+                    dataTransferred.textContent = (parseFloat(dataTransferred.textContent) + Math.random() * 0.1).toFixed(2) + ' MB';
+                    
+                    // Add packet data
+                    const now = new Date();
+                    const timeStr = now.toTimeString().substring(0, 8) + '.' + Math.floor(Math.random() * 1000);
+                    const protocols = ['TCP', 'UDP', 'ICMP'];
+                    const protocol = protocols[Math.floor(Math.random() * protocols.length)];
+                    const srcIp = `192.168.1.${Math.floor(Math.random() * 254 + 1)}`;
+                    const destIp = `10.0.0.${Math.floor(Math.random() * 254 + 1)}`;
+                    const srcPort = Math.floor(Math.random() * 65535 + 1);
+                    const destPort = [80, 443, 22, 25, 53][Math.floor(Math.random() * 5)];
+                    const bytes = Math.floor(Math.random() * 1460 + 40);
+                    
+                    let packetStr;
+                    if (protocol === 'ICMP') {
+                        packetStr = `${timeStr} IP ${srcIp} > ${destIp}: ICMP echo request`;
+                    } else {
+                        packetStr = `${timeStr} IP ${srcIp}.${srcPort} > ${destIp}.${destPort}: ${protocol} ${bytes} bytes`;
+                    }
+                    
+                    addPacketData(packetStr);
+                    
+                    // Sometimes add a new connection
+                    if (Math.random() > 0.7) {
+                        addConnection({
+                            sourceIp: srcIp,
+                            destIp: destIp,
+                            protocol: protocol,
+                            port: protocol === 'ICMP' ? '-' : destPort
+                        });
+                    }
+                }, 1000);
+                
+                // Generate random alerts
+                alertInterval = setInterval(() => {
+                    if (Math.random() > 0.7) {
+                        const attackTypes = [
+                            { type: 'SQL Injection attempt', rule: 'SQL-001', severity: 'High' },
+                            { type: 'Port scan detected', rule: 'PORT-001', severity: 'Medium' },
+                            { type: 'Cross-site scripting attempt', rule: 'XSS-001', severity: 'High' },
+                            { type: 'Potential brute force login attempt', rule: 'BRUTE-001', severity: 'Medium' },
+                            { type: 'SYN flood attempt', rule: 'DOS-001', severity: 'High' },
+                            { type: 'ICMP ping sweep', rule: 'RECON-001', severity: 'Low' }
+                        ];
+                        
+                        const attack = attackTypes[Math.floor(Math.random() * attackTypes.length)];
+                        const srcIp = `192.168.1.${Math.floor(Math.random() * 254 + 1)}`;
+                        const destIp = `10.0.0.${Math.floor(Math.random() * 254 + 1)}`;
+                        
+                        const now = new Date();
+                        const timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+                        
+                        const alert = {
+                            timestamp: timestamp,
+                            message: `${attack.type} from ${srcIp}`,
+                            rule: attack.rule,
+                            severity: attack.severity,
+                            sourceIp: srcIp,
+                            destIp: destIp
+                        };
+                        
+                        addAlertItem(alert);
+                        sampleAlerts.unshift(alert);
+                        
+                        // Keep only last 100 alerts
+                        if (sampleAlerts.length > 100) {
+                            sampleAlerts.pop();
+                        }
+                        
+                        // Update counters
+                        updateCounters();
+                        
+                        // Add to log
+                        addLogEntry(`Alert triggered: ${attack.rule} - ${attack.type} from ${srcIp}`);
+                    }
+                }, 3000);
+            }
+            
+            function stopMonitoring() {
+                clearInterval(monitoringInterval);
+                clearInterval(alertInterval);
+                addLogEntry(`Stopped monitoring on ${interfaceSelect.value}`);
+            }
+        });
+    </script>
+</body>
+</html>
